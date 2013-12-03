@@ -1,0 +1,52 @@
+.column-tabs {
+    float: left;
+    width: 100%;
+}
+.column-tabs > a {
+    display: block;
+    float:   left;
+    padding: 5px 5px 5px 0;
+}
+
+.crowdfunding-sponsors > div {
+    margin: 15px 0;
+    clear: both;
+}
+.crowdfunding-sponsors img {
+    float: left;
+    margin:0 10px 10px 0;
+}
+.crowdfunding-sponsors .crowdfunding-sponsors-name {
+    color:#383632;
+}
+.crowdfunding-sponsors .crowdfunding-sponsors-donation {
+    color:#5E7D1B;
+}
+.view-all-sponsors {
+    display: block;
+    float: right;
+}
+
+.crowdfunding-stats {
+    float: left;
+    width: 100%;
+}
+.crowdfunding-amounts,
+.crowdfunding-time {
+    width:45%;
+    margin:0 5% 15px 0;
+    font-size:1.2em;
+    text-align: center;
+    float: left;
+}
+.crowdfunding-time {
+    margin:0 0 15px 5%;
+}
+.crowdfunding-amounts .crowdfunding-raised {
+    font-size:2em;
+    margin-bottom: 0.3em;
+    display: block;
+}
+.crowdfunding-amounts .crowdfunding-target {
+}
+

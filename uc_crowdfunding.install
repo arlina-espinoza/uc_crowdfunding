@@ -1,0 +1,72 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Installs the necessary table for the Crowdfunding product feature.
+ */
+
+function uc_crowdfunding_schema() {
+  $schema = array();
+
+  $schema['uc_crowdfunding_products'] = array(
+    'fields' => array(
+      'cfid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'pfid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'dateline' => array(
+        'description' => t('Unix timestamp of the dateline to close the funding.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'target' => array(
+        'description' => t('Target amount to raise.'),
+        'type' => 'numeric',
+        'precision' => 10,
+        'scale' => 2,
+        'not null' => TRUE,
+        'default' => 0.0,
+      ),
+      'type' => array(
+        'description' => t('How this product checks to see if it is available.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+    ),
+    'indexes' => array(
+      'pfid' => array('pfid'),
+    ),
+    'primary key' => array('cfid'),
+  );
+
+  return $schema;
+}
+
+function uc_crowdfunding_install() {
+  drupal_install_schema('uc_crowdfunding');
+}
+
+function uc_crowdfunding_uninstall() {
+  drupal_uninstall_schema('uc_crowdfunding');
+  db_query("DELETE FROM {uc_product_features} WHERE fid = 'crowdfunding'");
+  variable_del('uc_crowdfunding_global_default_dateline');
+  global $conf;
+  foreach (array_keys($conf) as $key) {
+    if (strpos($key, 'uccf_class_def_') === 0) {
+      variable_del($key);
+    }
+  }
+}

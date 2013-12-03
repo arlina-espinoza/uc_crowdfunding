@@ -1,0 +1,7 @@
+; $Id$
+name = Crowdfunding
+description = Defines a product feature to turn any product crowdfunding style donation product. It must be used together with the Variable Price module.
+dependencies[] = uc_varprice
+package = Ubercart - extra
+core = 6.x
+
