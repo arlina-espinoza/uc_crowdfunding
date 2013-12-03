@@ -1,6 +1,6 @@
 <?php 
-$gross = uc_currency_format($uc_cfgross, FALSE, TRUE);
-$porcentaje = 100 * $uc_cfgross / $uc_cftarget;
+$gross = uc_currency_format($uc_crowdfunding_gross, FALSE, TRUE);
+$porcentaje = 100 * $uc_crowdfunding_gross / $uc_crowdfunding_target;
 $porcentaje = ($porcentaje > 100) ? 100 : $porcentaje;
 $porcentaje = ($porcentaje < 0  ) ? 0   : $porcentaje;
 ?>

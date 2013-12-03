@@ -1,30 +1,12 @@
 <?php
-
-define('CHECK_TARGET_AND_DATELINE', 1);
-define('CHECK_DATELINE',            2);
-
 /**
  * @file
  * Defines a product feature to turn any product into a crowdfunded donation product.
  */
 
-/**
- * Implementation of hook_init()
- 
-function uc_varprice_init() {
-  drupal_add_js(drupal_get_path('module', 'uc_varprice') . '/uc_varprice_show_arb.js');
-}*/
+define('UC_CROWDFUNDING_TARGET_DATELINE', 1);
+define('UC_CROWDFUNDING_CHECK_DATELINE',  2);
 
-/**
- * Implementation of hook_theme()
- 
-function uc_varprice_theme() {
-  return array(
-    'varprice_qty' => array(
-      'arguments' => array('form' => NULL),
-    ),
-  );
-}*/
 
 /**
  * Implements hook_theme().
@@ -36,12 +18,16 @@ function uc_crowdfunding_theme() {
             'template'  => 'uc_crowdfunding_sponsors',
         ),
         'uc_crowdfunding_funded_bar' => array(
-            'arguments' => array('nid' => NULL, 'uc_cfgross' => NULL, 'uc_cftarget' => NULL),
+            'arguments' => array('nid' => NULL, 'uc_crowdfunding_gross' => NULL, 'uc_crowdfunding_target' => NULL),
+            'arguments' => array('nid' => NULL, 'uc_crowdfunding_gross' => NULL, 'uc_crowdfunding_target' => NULL),
             'template'  => 'uc_crowdfunding_funded_bar',
         ),
     );
 }
 
+/**
+ * Implementation of hook_init()
+ */
 function uc_crowdfunding_init(){
     drupal_add_css(drupal_get_path('module', 'uc_crowdfunding') . '/uc_crowdfunding.css');
 }
@@ -56,8 +42,8 @@ function uc_crowdfunding_preprocess_uc_crowdfunding_funded_bar(&$vars){
     $cf_settings = array(
         $nid => array(
             'nid'         => $vars['nid'],
-            'uc_cfgross'  => $vars['uc_cfgross'],
-            'uc_cftarget' => $vars['uc_cftarget'],
+            'uc_crowdfunding_gross'  => $vars['uc_crowdfunding_gross'],
+            'uc_crowdfunding_target' => $vars['uc_crowdfunding_target'],
         ),
     );
     drupal_add_js(array('cf_crowdfunding' => $cf_settings), 'setting');
@@ -183,19 +169,19 @@ function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         
        $report    = uc_crowdfunding_product_report($node->nid);
        $feature   = uc_crowdfunding_product_load($node->nid);
-       $node->uc_cfsold     = $report->sold;
-       $node->uc_cfgross    = $report->gross;
-       $node->uc_cfrevenue  = $report->revenue;
+       $node->uc_crowdfunding_sold     = $report->sold;
+       $node->uc_crowdfunding_gross    = $report->gross;
+       $node->uc_crowdfunding_revenue  = $report->revenue;
          
        if (db_result(db_query("SELECT pfid FROM {uc_product_features} WHERE fid = 'crowdfunding' AND nid = %d", $node->nid))) {
          $sponsors      = _uc_crowdfunding_sponsors_report($node->nid);
          
-         $node->uc_cftarget   = $feature->target;
-         $node->uc_cfdateline = $feature->dateline;
-         $node->uc_cftype     = $feature->type;
-         $node->uc_cfenabled  = _uc_crowdfunding_is_enabled($node->nid);
-         $node->uc_cf_days_remaining =_uc_crowdfunding_days_remaing($feature->dateline);
-         $node->uc_cf_goal_achieved  =_uc_crowdfunding_goal_achieved($node->nid, $feature, $report);
+         $node->uc_crowdfunding_target   = $feature->target;
+         $node->uc_crowdfunding_dateline = $feature->dateline;
+         $node->uc_crowdfunding_type     = $feature->type;
+         $node->uc_crowdfunding_enabled  = _uc_crowdfunding_is_enabled($node->nid);
+         $node->uc_crowdfunding_days_remaining =_uc_crowdfunding_days_remaing($feature->dateline);
+         $node->uc_crowdfunding_goal_achieved  =_uc_crowdfunding_goal_achieved($node->nid, $feature, $report);
          $node->sponsors_latest      = theme('uc_crowdfunding_sponsors', $sponsors, 5);
          $node->sponsors             = theme('uc_crowdfunding_sponsors', $sponsors, NULL, TRUE);
          $node->sponsors_count       = count($sponsors);
@@ -206,8 +192,8 @@ function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         static $just_once_crowdfunding;
         if (!isset($just_once_crowdfunding)) {
             $cf_settings = array(
-              'uc_cfgross'  => $node->uc_cfgross,
-              'uc_cftarget' => $node->uc_cftarget,
+              'uc_crowdfunding_gross'  => $node->uc_crowdfunding_gross,
+              'uc_crowdfunding_target' => $node->uc_crowdfunding_target,
             );
             drupal_add_js(array('cf_crowdfunding' => $cf_settings), 'setting');
             drupal_add_js(drupal_get_path('module', 'uc_crowdfunding') . '/uc_crowdfunding.js');
@@ -368,10 +354,10 @@ function _uc_crowdfunding_feature_form($data = FALSE) {
     '#type' => 'radios',
     '#title' => t('Type'),
     '#options' => array(
-        CHECK_TARGET_AND_DATELINE => t('Disable donations if current date is after dateline OR if target amount is reached.'),
-        CHECK_DATELINE            => t('Disable donations if current date is after dateline (allows donating past target amount).')
+        UC_CROWDFUNDING_TARGET_DATELINE => t('Disable donations if current date is after dateline OR if target amount is reached.'),
+        UC_CROWDFUNDING_CHECK_DATELINE            => t('Disable donations if current date is after dateline (allows donating past target amount).')
     ),
-    '#default_value' => $data ? $data->cf_type : CHECK_TARGET_AND_DATELINE,
+    '#default_value' => $data ? $data->cf_type : UC_CROWDFUNDING_TARGET_DATELINE,
   );
   
   return $form;
@@ -466,8 +452,8 @@ function uc_crowdfunding_product_report($nid) {
      $row->gross   = $row->gross   ? $row->gross   : 0;
      $row->revenue = $row->revenue ? $row->revenue : 0;
      
-     module_invoke_all('uc_cf_product_report', $nid, $row);
-     //$row = module_invoke_all('uc_cf_product_report', $nid, &$row);
+     module_invoke_all('uc_crowdfunding_product_report', $nid, $row);
+     //$row = module_invoke_all('uc_crowdfunding_product_report', $nid, &$row);
   return $row;
 }
 
@@ -488,12 +474,12 @@ function _uc_crowdfunding_is_enabled($nid) {
     
     $enabled = TRUE;
     switch ($features->type){
-        case CHECK_TARGET_AND_DATELINE:
+        case UC_CROWDFUNDING_TARGET_DATELINE:
             if ($is_past_target || $is_past_dateline){
                 $enabled = FALSE;
             }
             break;
-        case CHECK_DATELINE:
+        case UC_CROWDFUNDING_CHECK_DATELINE:
             if ($is_past_dateline){
                 $enabled = FALSE;
             }
@@ -570,7 +556,7 @@ function _uc_crowdfunding_sponsors_report($nid) {
          $sponsors[]         = $sponsor;
      }
      
-    $sponsors = module_invoke_all('uc_cf_sponsors', $nid, &$sponsors);
-    //module_invoke_all('uc_cf_sponsors', $nid, &$sponsors);
+    $sponsors = module_invoke_all('uc_crowdfunding_sponsors', $nid, &$sponsors);
+    //module_invoke_all('uc_crowdfunding_sponsors', $nid, &$sponsors);
     return $sponsors;
 }

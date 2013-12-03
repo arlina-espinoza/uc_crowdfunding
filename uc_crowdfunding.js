@@ -8,7 +8,7 @@ Drupal.behaviors.uc_crowdfunding = function(context) {
 	});
     
     // Progress bar
-    var porcentage = 100 * Drupal.settings.cf_crowdfunding.uc_cfgross / Drupal.settings.cf_crowdfunding.uc_cftarget;
+    var porcentage = 100 * Drupal.settings.cf_crowdfunding.uc_crowdfunding_gross / Drupal.settings.cf_crowdfunding.uc_crowdfunding_target;
     porcentage = (porcentage > 100) ? 100 : porcentage;
     porcentage = (porcentage < 0  ) ? 0   : porcentage;
     
