@@ -354,8 +354,8 @@ function _uc_crowdfunding_feature_form($data = FALSE) {
     '#type' => 'radios',
     '#title' => t('Type'),
     '#options' => array(
-        UC_CROWDFUNDING_TARGET_DATELINE => t('Disable donations if current date is after dateline OR if target amount is reached.'),
-        UC_CROWDFUNDING_CHECK_DATELINE            => t('Disable donations if current date is after dateline (allows donating past target amount).')
+      UC_CROWDFUNDING_TARGET_DATELINE => _uc_crowdfunding_get_options_explanations(UC_CROWDFUNDING_TARGET_DATELINE),
+      UC_CROWDFUNDING_CHECK_DATELINE  => _uc_crowdfunding_get_options_explanations(UC_CROWDFUNDING_CHECK_DATELINE),
     ),
     '#default_value' => $data ? $data->cf_type : UC_CROWDFUNDING_TARGET_DATELINE,
   );
@@ -386,13 +386,19 @@ function uc_crowdfunding_feature_form_submit($form, &$form_state) {
     t('Set the default values for this crowdfunding product.'),
   );
   if (!empty($cf_data['dateline'])) {
-    $description[] = t('<strong>Dateline:</strong> @var', array('@var' => $form_state['values']['cf_dateline']));
+    $description[] = t('<strong>Dateline:</strong> @var', array(
+      '@var' => $form_state['values']['cf_dateline'],
+    ));
   }
   if (!empty($cf_data['target'])) {
-    $description[] = t('<strong>Target amount:</strong> @var', array('@var' => $cf_data['target']));
+    $description[] = t('<strong>Target amount:</strong> @var', array(
+      '@var' => $cf_data['target'],
+    ));
   }
   if (!empty($cf_data['type'])) {
-    $description[] = t('<strong>Type:</strong> @var', array('@var' => $cf_data['type']));
+    $description[] = t('<strong>Type:</strong> @var', array(
+      '@var' => _uc_crowdfunding_get_options_explanations($cf_data['type']),
+    ));
   }
 
   // Save the basic product feature data.
@@ -559,4 +565,15 @@ function _uc_crowdfunding_sponsors_report($nid) {
     $sponsors = module_invoke_all('uc_crowdfunding_sponsors', $nid, &$sponsors);
     //module_invoke_all('uc_crowdfunding_sponsors', $nid, &$sponsors);
     return $sponsors;
+}
+
+function _uc_crowdfunding_get_options_explanations($option){
+  switch ($option){
+    case UC_CROWDFUNDING_TARGET_DATELINE:
+      return t('Disable donations if current date is after dateline OR if target amount is reached.');
+    case UC_CROWDFUNDING_CHECK_DATELINE:
+      return t('Disable donations if current date is after dateline (allows donating past target amount).');
+    default:
+      return '';
+    }
 }
