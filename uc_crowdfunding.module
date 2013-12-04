@@ -174,7 +174,7 @@ function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
        $node->uc_crowdfunding_revenue  = $report->revenue;
          
        if (db_result(db_query("SELECT pfid FROM {uc_product_features} WHERE fid = 'crowdfunding' AND nid = %d", $node->nid))) {
-         $sponsors      = _uc_crowdfunding_sponsors_report($node->nid);
+         //$sponsors      = _uc_crowdfunding_sponsors_report($node->nid);
          
          $node->uc_crowdfunding_target   = $feature->target;
          $node->uc_crowdfunding_dateline = $feature->dateline;
@@ -182,9 +182,9 @@ function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
          $node->uc_crowdfunding_enabled  = _uc_crowdfunding_is_enabled($node->nid);
          $node->uc_crowdfunding_days_remaining =_uc_crowdfunding_days_remaing($feature->dateline);
          $node->uc_crowdfunding_goal_achieved  =_uc_crowdfunding_goal_achieved($node->nid, $feature, $report);
-         $node->sponsors_latest      = theme('uc_crowdfunding_sponsors', $sponsors, 5);
+         /*$node->sponsors_latest      = theme('uc_crowdfunding_sponsors', $sponsors, 5);
          $node->sponsors             = theme('uc_crowdfunding_sponsors', $sponsors, NULL, TRUE);
-         $node->sponsors_count       = count($sponsors);
+         $node->sponsors_count       = count($sponsors);*/
         }
         break;
     case 'view':
@@ -308,7 +308,7 @@ function uc_crowdfunding_feature_form($form_state, $node, $feature) {
   if ($data = db_fetch_object(db_query("SELECT * FROM {uc_crowdfunding_products} WHERE pfid = %d", $feature['pfid']))) {
     //$data->sel_options = unserialize($data->sel_options);
     if ($data->dateline){
-        $data->dateline = date('Y-m-d', $data->dateline);
+        $data->dateline = date('Y-m-d H:i', $data->dateline);
     }
   }
 
@@ -329,7 +329,7 @@ function uc_crowdfunding_feature_form($form_state, $node, $feature) {
 function _uc_crowdfunding_feature_form($data = FALSE) {
   $form = array();
   $default_date = strtotime(variable_get('uc_crowdfunding_global_default_dateline', '+14days'));
-  $default_date = date('Y-m-d', $default_date);
+  $default_date = date('Y-m-d H:i', $default_date);
   
   $form['#validate'] = array('uc_crowdfunding_feature_form_validate');
   
@@ -337,11 +337,28 @@ function _uc_crowdfunding_feature_form($data = FALSE) {
     '#type' => 'fieldset',
     '#title' => t('Crowdfunding settings'),
   );
-  $form['crowdfunding']['cf_dateline'] = array(
+  /*$form['crowdfunding']['cf_dateline'] = array(
     '#type' => 'textfield',
     '#title' => t('Dateline'),
     '#description' => t('The dateline for this product'),
     '#default_value' => empty($data->dateline) ? $default_date : $data->dateline,
+  );
+  $form['crowdfunding']['cf_dateline1'] = array(
+    '#type' => 'date',
+    '#title' => t('Dateline'),
+    '#description' => t('The dateline for this product'),
+    '#default_value' => $edit[$field->name],
+    '#required' => TRUE,
+  );*/
+  $form['crowdfunding']['cf_dateline'] = array(
+  	'#type' => 'date_select', // types 'date_text' and 'date_timezone' are also supported. See .inc file.
+    '#title' => t('Dateline'),
+    '#description' => t('The dateline for this product'),
+  	'#default_value' => empty($data->dateline) ? $default_date : $data->dateline,
+    //'#default_value' => $date,
+    '#date_format' => 'Y-m-d H:i',
+    '#date_label_position' => 'within', // See other available attributes and what they do in date_api_elements.inc
+    '#date_increment' => 15, // Optional, used by the date_select and date_popup elements to increment minutes and seconds.
   );
   $form['crowdfunding']['cf_target'] = array(
     '#type' => 'textfield',
@@ -349,6 +366,7 @@ function _uc_crowdfunding_feature_form($data = FALSE) {
     '#default_value' => $data ? $data->target : 0,
     '#field_prefix' => variable_get('uc_sign_after_amount', FALSE) ? '' : variable_get('uc_currency_sign', '$'),
     '#field_suffix' => variable_get('uc_sign_after_amount', FALSE) ? variable_get('uc_currency_sign', '$') : '',
+    '#required' => TRUE,
   );
   $form['crowdfunding']['cf_type'] = array(
     '#type' => 'radios',
@@ -357,7 +375,8 @@ function _uc_crowdfunding_feature_form($data = FALSE) {
       UC_CROWDFUNDING_TARGET_DATELINE => _uc_crowdfunding_get_options_explanations(UC_CROWDFUNDING_TARGET_DATELINE),
       UC_CROWDFUNDING_CHECK_DATELINE  => _uc_crowdfunding_get_options_explanations(UC_CROWDFUNDING_CHECK_DATELINE),
     ),
-    '#default_value' => $data ? $data->cf_type : UC_CROWDFUNDING_TARGET_DATELINE,
+    '#default_value' => $data ? $data->type : UC_CROWDFUNDING_TARGET_DATELINE,
+    '#required' => TRUE,
   );
   
   return $form;
@@ -380,10 +399,11 @@ function uc_crowdfunding_feature_form_submit($form, &$form_state) {
     'target'   => $form_state['values']['cf_target'],
     'type'     => $form_state['values']['cf_type'],
   );  
-
+  drupal_set_message($form_state['values']['cf_dateline']);
+  drupal_set_message('now: '. date('Y-m-d H:i'));
   // Build the product feature description.
   $description = array(
-    t('Set the default values for this crowdfunding product.'),
+    t('Set the values for this crowdfunding product.'),
   );
   if (!empty($cf_data['dateline'])) {
     $description[] = t('<strong>Dateline:</strong> @var', array(
@@ -449,8 +469,7 @@ function uc_crowdfunding_product_report($nid) {
                     (SELECT (SUM(uop.price * uop.qty) - SUM(uop.cost * uop.qty)) FROM {uc_order_products} AS uop LEFT JOIN {uc_orders} AS uo ON uop.order_id = uo.order_id WHERE uo.order_status IN ('paypal_pending', 'payment_received', 'completed') AND uop.nid = n.nid) AS gross, 
                     (SELECT (SUM(uop.price * uop.qty)) FROM {uc_order_products} AS uop LEFT JOIN {uc_orders} AS uo ON uop.order_id = uo.order_id WHERE uo.order_status IN ('paypal_pending', 'payment_received', 'completed') AND uop.nid = n.nid) AS revenue
                     FROM {node} as n 
-                    WHERE n.type IN ('product', 'multiproduct', 'donation', 'crowdfunding') 
-                    AND n.nid = %d
+                    WHERE n.nid = %d
                     GROUP BY n.nid, n.title";
      $result = db_query($query, $nid);
      $row    = db_fetch_object($result);
@@ -473,50 +492,58 @@ function uc_crowdfunding_product_report($nid) {
  * according to the type defined.
  */
 function _uc_crowdfunding_is_enabled($nid) {
-    $features = uc_crowdfunding_product_load($nid);
-    $report   = uc_crowdfunding_product_report($nid);
-    $is_past_dateline = ($features->dateline < time()) ? 1 : 0;
-    $is_past_target   = ($features->target <= $report->gross) ? 1: 0;
-    
-    $enabled = TRUE;
-    switch ($features->type){
-        case UC_CROWDFUNDING_TARGET_DATELINE:
-            if ($is_past_target || $is_past_dateline){
-                $enabled = FALSE;
-            }
-            break;
-        case UC_CROWDFUNDING_CHECK_DATELINE:
-            if ($is_past_dateline){
-                $enabled = FALSE;
-            }
-            break;
-    }
-    return $enabled;
+  $features = uc_crowdfunding_product_load($nid);
+  $report   = uc_crowdfunding_product_report($nid);
+  $is_past_dateline = ($features->dateline < time()) ? 1 : 0;
+  $is_past_target   = ($features->target <= $report->gross) ? 1: 0;
+  
+  $enabled = TRUE;
+  switch ($features->type){
+    case UC_CROWDFUNDING_TARGET_DATELINE:
+      if ($is_past_target || $is_past_dateline){
+        $enabled = FALSE;
+      }
+      break;
+    case UC_CROWDFUNDING_CHECK_DATELINE:
+      if ($is_past_dateline){
+        $enabled = FALSE;
+      }
+      break;
+  }
+  return $enabled;
 } 
 
 /**
- * Helper function to determine the remaining days to go off a donation.
+ * Helper function to determine the remaining days of a donation.
  */
 function _uc_crowdfunding_days_remaing($dateline) {
-    $remaining = $dateline - time(); // unix timestamp - seconds
-    if ($remaining <=0)    return 0;
-    $remaining = $remaining/(60*60*24);
+  $remaining = $dateline - time(); // unix timestamp - seconds
+  if ($remaining <=0){
+    return 0;
+  }
+  $remaining = $remaining / (60 * 60* 24);
     
-    return ceil($remaining);
+  return ceil($remaining);
 }
 
 /**
  * Helper function to determine the goal was achieved
  */
 function _uc_crowdfunding_goal_achieved($nid, $features = NULL, $report = NULL) {
-    if (!$features)  $features = uc_crowdfunding_product_load($nid);
-    if (!$report)    $report   = uc_crowdfunding_product_report($nid);
-    
-    if ($features->target <= $report->gross) return TRUE;
-    return FALSE;
+  if (!$features){
+    $features = uc_crowdfunding_product_load($nid);
+  }
+  if (!$report){
+    $report   = uc_crowdfunding_product_report($nid);
+  }
+  if ($features->target <= $report->gross){
+    return TRUE;
+  } 
+  return FALSE;
 }
 
 // Load the sponsors for a certain product
+/*
 function _uc_crowdfunding_sponsors_report($nid) {
     // Get this node sales report; SQL based on the uc_reports module
     $query   = "SELECT op.order_product_id, op.order_id, op.data, nid, uid, price, billing_first_name, billing_last_name, billing_city, modified
@@ -566,6 +593,7 @@ function _uc_crowdfunding_sponsors_report($nid) {
     //module_invoke_all('uc_crowdfunding_sponsors', $nid, &$sponsors);
     return $sponsors;
 }
+*/
 
 function _uc_crowdfunding_get_options_explanations($option){
   switch ($option){

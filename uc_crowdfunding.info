@@ -1,6 +1,9 @@
 name = Crowdfunding
 description = Defines a product feature to turn any product to a "crowdfunding style donation" product.
-dependencies[] = uc_varprice
+dependencies[] = uc_cart
+dependencies[] = uc_product
+dependencies[] = uc_store
+dependencies[] = date_api
 package = Ubercart - extra
 core = 6.x
 
