@@ -1,10 +1,15 @@
 <?php
-
 /**
  * @file
- * Installs the necessary table for the Crowdfunding product feature.
+ * Install, update, and uninstall tables for the 
+ * Ubercart Crowdfunding Feature module.
+ * 
+ * By Arlina Espinoza ("Anilam", http://drupal.org/user/1055344)
  */
 
+/**
+ * Implements hook_schema().
+ */
 function uc_crowdfunding_schema() {
   $schema = array();
 
@@ -22,14 +27,14 @@ function uc_crowdfunding_schema() {
         'default' => 0,
       ),
       'dateline' => array(
-        'description' => t('Unix timestamp of the dateline to close the funding.'),
+        'description' => 'Unix timestamp of the dateline to close the funding.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
       ),
       'target' => array(
-        'description' => t('Target amount to raise.'),
+        'description' => 'Target amount to raise.',
         'type' => 'numeric',
         'precision' => 10,
         'scale' => 2,
@@ -37,7 +42,7 @@ function uc_crowdfunding_schema() {
         'default' => 0.0,
       ),
       'type' => array(
-        'description' => t('How this product checks to see if it is available.'),
+        'description' => 'How the product checks if it is available.',
         'type' => 'int',
         'size' => 'tiny',
         'unsigned' => TRUE,
@@ -54,10 +59,16 @@ function uc_crowdfunding_schema() {
   return $schema;
 }
 
+/**
+ * Implements hook_install().
+ */
 function uc_crowdfunding_install() {
   drupal_install_schema('uc_crowdfunding');
 }
 
+/**
+ * Implements hook_uninstall().
+ */
 function uc_crowdfunding_uninstall() {
   drupal_uninstall_schema('uc_crowdfunding');
   db_query("DELETE FROM {uc_product_features} WHERE fid = 'crowdfunding'");

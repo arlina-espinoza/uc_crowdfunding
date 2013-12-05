@@ -1,5 +1,5 @@
 name = Crowdfunding
-description = Defines a product feature to turn any product to a "crowdfunding style donation" product.
+description = Defines a product feature to turn any product to a "crowdfunding style" product.
 dependencies[] = uc_cart
 dependencies[] = uc_product
 dependencies[] = uc_store
