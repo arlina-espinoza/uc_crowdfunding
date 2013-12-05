@@ -3,7 +3,7 @@
  * @file
  * Documents hooks provided by Ubercart Crowdfunding Feature module.
  *
- * By Arlina Espinoza ("Anilam", http://drupal.org/user/1055344)
+ * By Arlina E. Rhoton ("Arlina", http://drupal.org/user/1055344)
  */
 
 /**

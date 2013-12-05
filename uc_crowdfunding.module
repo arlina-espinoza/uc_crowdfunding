@@ -6,7 +6,7 @@
  * Defines a product feature to turn any product into a
  * crowdfunding style donation product.
  *
- * By Arlina Espinoza ("Anilam", http://drupal.org/user/1055344)
+ * By Arlina E. Rhoton ("Arlina", http://drupal.org/user/1055344)
  */
 
 /**
@@ -198,13 +198,12 @@ function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
                 WHERE fid = 'crowdfunding' AND nid = %d";
       if (db_result(db_query($query, $node->nid))) {
         // $sponsors      = _uc_crowdfunding_sponsors_report($node->nid);
-         
         $node->uc_crowdfunding_target   = $feature->target;
         $node->uc_crowdfunding_dateline = $feature->dateline;
         $node->uc_crowdfunding_type     = $feature->type;
         $node->uc_crowdfunding_enabled  = _uc_crowdfunding_is_enabled($node->nid);
-        $node->uc_crowdfunding_days_remaining =_uc_crowdfunding_days_remaing($feature->dateline);
-        $node->uc_crowdfunding_goal_achieved  =_uc_crowdfunding_goal_achieved($node->nid, $feature, $report);
+        $node->uc_crowdfunding_days_remaining = _uc_crowdfunding_days_remaing($feature->dateline);
+        $node->uc_crowdfunding_goal_achieved  = _uc_crowdfunding_goal_achieved($node->nid, $feature, $report);
         /*$node->sponsors_latest      = theme('uc_crowdfunding_sponsors', $sponsors, 5);
          $node->sponsors             = theme('uc_crowdfunding_sponsors', $sponsors, NULL, TRUE);
          $node->sponsors_count       = count($sponsors);*/
@@ -216,8 +215,8 @@ function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       if (!isset($uc_crowdfunding_include_once)) {
         $module_path = drupal_get_path('module', 'uc_crowdfunding');
         $cf_settings = array(
-              'uc_crowdfunding_gross'  => $node->uc_crowdfunding_gross,
-              'uc_crowdfunding_target' => $node->uc_crowdfunding_target,
+          'uc_crowdfunding_gross'  => $node->uc_crowdfunding_gross,
+          'uc_crowdfunding_target' => $node->uc_crowdfunding_target,
         );
         drupal_add_js(array('cf_crowdfunding' => $cf_settings), 'setting');
         drupal_add_js($module_path . '/uc_crowdfunding.js');
@@ -227,7 +226,7 @@ function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       break;
 
     case 'insert':
-      $data = variable_get('uccf_class_def_'. $node->type, array());
+      $data = variable_get('uccf_class_def_' . $node->type, array());
 
       // If product class has a default crowdfunding product feature.
       if ($data) {
@@ -310,14 +309,14 @@ function uc_crowdfunding_product_feature() {
  *   The crowdfunding product feature form.
  */
 function _uc_crowdfunding_settings() {
-  $form = array();
+  $description1 = t('The global default dateline for crowdfunding products.');
+  $description2 = t('Must be a format recognized by PHP strtotime.');
 
+  $form = array();
   $form['uc_crowdfunding_global_default_dateline'] = array(
     '#title' => t('Global default dateline'),
     '#type' => 'textfield',
-    '#description' => t('The global default dateline for crowdfunding products; '.
-                        'may be overridden at the product class or product level. '.
-                        'Must be a format recognized by PHP strtotime.'),
+    '#description' => $description1 . ' ' . $description2,
     '#default_value' => variable_get('uc_crowdfunding_global_default_dateline', '+14 days'),
   );
 
@@ -334,7 +333,7 @@ function uc_crowdfunding_feature_form($form_state, $node, $feature) {
   $query = 'SELECT * FROM {uc_crowdfunding_products} WHERE pfid = %d';
   $data = db_fetch_object(db_query($query, $feature['pfid']));
   if ($data && $data->dateline) {
-    $data->dateline =  format_date($data->dateline, 'custom', 'Y-m-d H:i');
+    $data->dateline = format_date($data->dateline, 'custom', 'Y-m-d H:i');
   }
 
   $form['nid'] = array(
@@ -391,9 +390,9 @@ function _uc_crowdfunding_feature_form($data = FALSE) {
     '#type' => 'radios',
     '#title' => t('Type'),
     '#options' => array(
-  UC_CROWDFUNDING_TARGET_DATELINE => _uc_crowdfunding_explanations(UC_CROWDFUNDING_TARGET_DATELINE),
-  UC_CROWDFUNDING_CHECK_DATELINE  => _uc_crowdfunding_explanations(UC_CROWDFUNDING_CHECK_DATELINE),
-  ),
+      UC_CROWDFUNDING_TARGET_DATELINE => _uc_crowdfunding_explanations(UC_CROWDFUNDING_TARGET_DATELINE),
+      UC_CROWDFUNDING_CHECK_DATELINE  => _uc_crowdfunding_explanations(UC_CROWDFUNDING_CHECK_DATELINE),
+    ),
     '#default_value' => $data ? $data->type : UC_CROWDFUNDING_TARGET_DATELINE,
     '#required' => TRUE,
   );
@@ -405,7 +404,7 @@ function _uc_crowdfunding_feature_form($data = FALSE) {
  * Validate the crowdfunding feature form.
  */
 function uc_crowdfunding_feature_form_validate($form, &$form_state) {
-  // Check for invalid amount in the "Target Amount" field
+  // Check for invalid amount in the "Target Amount" field.
   $value = $form_state['values']['cf_target'];
   if (!is_numeric($value)) {
     form_set_error('cf_target', t('The value %val does not appear to be a number. Please enter the amount without currency symbols.', array('%val' => $value)));
@@ -515,7 +514,7 @@ function uc_crowdfunding_product_load($nid) {
  *   - revenue: The total revenue this product has generated.
  */
 function uc_crowdfunding_product_report($nid) {
-  // Get this node sales report; SQL based on the uc_reports module
+  // Get the node sales report; SQL based on the uc_reports module.
   $status = "'payment_received', 'completed'";
   $query = "SELECT n.nid, n.title,
             ( SELECT SUM(uop.qty) FROM {uc_order_products} AS uop 
@@ -536,16 +535,18 @@ function uc_crowdfunding_product_report($nid) {
             GROUP BY n.nid, n.title";
   $result = db_query($query, $nid);
   $row = db_fetch_object($result);
-  $row->sold    = $row->sold    ? $row->sold    : 0;
-  $row->gross   = $row->gross   ? $row->gross   : 0;
+  $row->sold = $row->sold ? $row->sold : 0;
+  $row->gross = $row->gross ? $row->gross : 0;
   $row->revenue = $row->revenue ? $row->revenue : 0;
-   
+  
   module_invoke_all('uc_cf_product_report', $nid, $row);
   // $row = module_invoke_all('uc_crowdfunding_product_report', $nid, &$row);
   return $row;
 }
 
 /**
+ * Determine if the node should be available for sale.
+ * 
  * Helper function to determine if the node should be available for sale,
  * according to the node feature settings.
  *
@@ -561,7 +562,7 @@ function _uc_crowdfunding_is_enabled($nid) {
   $features = uc_crowdfunding_product_load($nid);
   $report   = uc_crowdfunding_product_report($nid);
   $is_past_dateline = ($features->dateline < time()) ? TRUE : FALSE;
-  $is_past_target   = ($features->target <= $report->gross) ? TRUE: FALSE;
+  $is_past_target = ($features->target <= $report->gross) ? TRUE : FALSE;
 
   $enabled = TRUE;
   switch ($features->type) {
@@ -570,6 +571,7 @@ function _uc_crowdfunding_is_enabled($nid) {
         $enabled = FALSE;
       }
       break;
+      
     case UC_CROWDFUNDING_CHECK_DATELINE:
       if ($is_past_dateline) {
         $enabled = FALSE;
@@ -594,7 +596,7 @@ function _uc_crowdfunding_days_remaing($dateline) {
   if ($remaining <= 0) {
     return 0;
   }
-  $remaining = $remaining / (60 * 60* 24);
+  $remaining = $remaining / (60 * 60 * 24);
 
   return ceil($remaining);
 }
@@ -693,8 +695,10 @@ function _uc_crowdfunding_explanations($option) {
   switch ($option) {
     case UC_CROWDFUNDING_TARGET_DATELINE:
       return t('Disable donations if current date is after dateline OR if target amount is reached.');
+      
     case UC_CROWDFUNDING_CHECK_DATELINE:
       return t('Disable donations if current date is after dateline (allows donating past target amount).');
+      
     default:
       return '';
   }
