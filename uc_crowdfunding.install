@@ -75,7 +75,7 @@ function uc_crowdfunding_uninstall() {
   variable_del('uc_crowdfunding_global_default_dateline');
   global $conf;
   foreach (array_keys($conf) as $key) {
-    if (strpos($key, 'uccf_class_def_') === 0) {
+    if (strpos($key, 'uc_crowdfunding_class_') === 0) {
       variable_del($key);
     }
   }

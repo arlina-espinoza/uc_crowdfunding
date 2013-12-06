@@ -17,60 +17,6 @@
 define('UC_CROWDFUNDING_TARGET_DATELINE', 1);
 define('UC_CROWDFUNDING_CHECK_DATELINE', 2);
 
-
-/**
- * Implements hook_theme().
- */
-function uc_crowdfunding_theme() {
-  return array(
-    'uc_crowdfunding_sponsors' => array(
-      'arguments' => array(
-        'sponsors' => NULL,
-        'length' => NULL,
-        'sort_asc' => FALSE,
-      ),
-      'template'  => 'uc_crowdfunding_sponsors',
-    ),
-    'uc_crowdfunding_funded_bar' => array(
-      'arguments' => array(
-        'nid' => NULL,
-        'uc_crowdfunding_gross' => NULL,
-        'uc_crowdfunding_target' => NULL,
-      ),
-      'arguments' => array(
-        'nid' => NULL,
-        'uc_crowdfunding_gross' => NULL,
-        'uc_crowdfunding_target' => NULL,
-      ),
-      'template'  => 'uc_crowdfunding_funded_bar',
-    ),
-  );
-}
-
-/**
- * Implements of hook_init().
- */
-function uc_crowdfunding_init() {
-  drupal_add_css(drupal_get_path('module', 'uc_crowdfunding') . '/uc_crowdfunding.css');
-}
-/*
- function uc_crowdfunding_preprocess_uc_crowdfunding_funded_bar(&$vars){
- static $uc_crowdfunding_include_once;
- if (!isset($uc_crowdfunding_include_once)) {
- drupal_add_js(drupal_get_path('module', 'uc_crowdfunding') . '/uc_crowdfunding.js', 'inline');
- drupal_add_css(drupal_get_path('module', 'uc_crowdfunding') . '/uc_crowdfunding.css');
- $uc_crowdfunding_include_once = TRUE;
- }
- $cf_settings = array(
- $nid => array(
- 'nid'         => $vars['nid'],
- 'uc_crowdfunding_gross'  => $vars['uc_crowdfunding_gross'],
- 'uc_crowdfunding_target' => $vars['uc_crowdfunding_target'],
- ),
- );
- drupal_add_js(array('cf_crowdfunding' => $cf_settings), 'setting');
- }*/
-
 /**
  * Implements hook_form_alter().
  *
@@ -88,7 +34,7 @@ function uc_crowdfunding_init() {
  * 4) Alter the product class form to set default values.
  */
 function uc_crowdfunding_form_alter(&$form, &$form_state, $form_id) {
-  $nid = arg(1);
+  $nid = $form['node']['#value']->nid;
 
   $query = "SELECT COUNT(*) FROM {uc_product_features}
             WHERE nid = %d AND fid = '%s'";
@@ -105,7 +51,7 @@ function uc_crowdfunding_form_alter(&$form, &$form_state, $form_id) {
   }
 
   if (strpos($form_id, 'uc_product_add_to_cart_form_') === 0) {
-
+   
     // 2) Hide the appropriate Qty. field on the cart view form.
     if ($node_has_cf_feature) {
       if (isset($form['qty'])) {
@@ -132,7 +78,7 @@ function uc_crowdfunding_form_alter(&$form, &$form_state, $form_id) {
 
   // 4) Alter the product class form to set default values.
   if ($form_id == 'uc_product_class_form') {
-    $data = variable_get('uccf_class_def_' . $form['pcid']['#value'], array());
+    $data = variable_get('uc_crowdfunding_class_' . $form['pcid']['#value'], array());
 
     $data = empty($data) ? FALSE : (object) unserialize($data);
 
@@ -149,7 +95,15 @@ function uc_crowdfunding_form_alter(&$form, &$form_state, $form_id) {
       '#default_value' => $data === FALSE ? FALSE : TRUE,
     );
     $form['crowdfunding'] += _uc_crowdfunding_feature_form($data);
-
+    $form_crowdfunding = &$form['crowdfunding']['crowdfunding'];
+    $form_crowdfunding['cf_dateline']['#type'] = 'textfield';
+    $form_crowdfunding['cf_dateline']['#description'] = t('Default dateline for this product');
+    $form_crowdfunding['cf_dateline']['#default_value'] = variable_get('uc_crowdfunding_global_default_dateline', '+14 days');
+    if ($data) {
+      $form_crowdfunding['cf_dateline']['#default_value'] = $data->cf_dateline;
+      $form_crowdfunding['cf_target']['#default_value'] = $data->cf_target;
+      $form_crowdfunding['cf_type']['#default_value'] = $data->cf_type;
+    }
     $form['#validate'][] = 'uc_crowdfunding_feature_form_validate';
     $form['#submit'][] = 'uc_crowdfunding_product_class_submit';
 
@@ -167,10 +121,10 @@ function uc_crowdfunding_product_class_submit($form, &$form_state) {
       'cf_target'   => $form_state['values']['cf_target'],
       'cf_type'     => $form_state['values']['cf_type'],
     );
-    variable_set('uccf_class_def_' . $form_state['values']['pcid'], serialize($data));
+    variable_set('uc_crowdfunding_class_' . $form_state['values']['pcid'], serialize($data));
   }
   else {
-    variable_del('uccf_class_def_' . $form_state['values']['pcid']);
+    variable_del('uc_crowdfunding_class_' . $form_state['values']['pcid']);
   }
 }
 
@@ -197,45 +151,28 @@ function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       $query = "SELECT pfid FROM {uc_product_features}
                 WHERE fid = 'crowdfunding' AND nid = %d";
       if (db_result(db_query($query, $node->nid))) {
-        // $sponsors      = _uc_crowdfunding_sponsors_report($node->nid);
         $node->uc_crowdfunding_target   = $feature->target;
         $node->uc_crowdfunding_dateline = $feature->dateline;
         $node->uc_crowdfunding_type     = $feature->type;
         $node->uc_crowdfunding_enabled  = _uc_crowdfunding_is_enabled($node->nid);
         $node->uc_crowdfunding_days_remaining = _uc_crowdfunding_days_remaing($feature->dateline);
         $node->uc_crowdfunding_goal_achieved  = _uc_crowdfunding_goal_achieved($node->nid, $feature, $report);
-        /*$node->sponsors_latest      = theme('uc_crowdfunding_sponsors', $sponsors, 5);
-         $node->sponsors             = theme('uc_crowdfunding_sponsors', $sponsors, NULL, TRUE);
-         $node->sponsors_count       = count($sponsors);*/
-      }
-      break;
-
-    case 'view':
-      static $uc_crowdfunding_include_once;
-      if (!isset($uc_crowdfunding_include_once)) {
-        $module_path = drupal_get_path('module', 'uc_crowdfunding');
-        $cf_settings = array(
-          'uc_crowdfunding_gross'  => $node->uc_crowdfunding_gross,
-          'uc_crowdfunding_target' => $node->uc_crowdfunding_target,
-        );
-        drupal_add_js(array('cf_crowdfunding' => $cf_settings), 'setting');
-        drupal_add_js($module_path . '/uc_crowdfunding.js');
-        drupal_add_css($module_path . '/uc_crowdfunding.css');
-        $uc_crowdfunding_include_once = TRUE;
       }
       break;
 
     case 'insert':
-      $data = variable_get('uccf_class_def_' . $node->type, array());
-
+      $data = variable_get('uc_crowdfunding_class_' . $node->type, array());
+      
       // If product class has a default crowdfunding product feature.
       if ($data) {
         // Prepare data as if it were from a form submission.
         $data = unserialize($data);
         $data['nid'] = $node->nid;
         $data['pfid'] = '';
+        $data['cf_dateline'] = strtotime($data['cf_dateline']);
+        $data['cf_dateline'] = format_date($data['cf_dateline'], 'custom', 'Y-m-d H:i');
         $form_state = array('values' => $data);
-
+        
         // Add feature to the product by spoofing the normal form submission.
         uc_crowdfunding_feature_form_submit(array(), $form_state);
       }
@@ -250,39 +187,6 @@ function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       break;
   }
 }
-
-/**
- * Implements hook_add_to_cart_data().
-
- function uc_varprice_add_to_cart_data($form_values) {
- // Store the customer entered price in the product's data array.
- if (isset($form_values['varprice']) && (!isset($form_values['varprice_sel']) || $form_values['varprice_sel'] === 'other')) {
- return array('varprice' => $form_values['varprice'], 'uniqid' => uniqid());
- }
- elseif (isset($form_values['varprice_sel'])) {
- return array('varprice' => $form_values['varprice_sel'], 'uniqid' => uniqid());
- }
- } */
-
-/**
- * Implements hook_cart_item().
-
- function uc_varprice_cart_item($op, &$item) {
- // When the cart product is being loaded...
- if ($op == 'load') {
- // If the product has a variable price set...
- if (!empty($item->data['varprice'])) {
- // Update the cart item's price to the entered price value.
- list($price,$uniqueness) = explode(':', $item->data['varprice']);
- $price = trim($price);
- $item->price = trim($price);
- // If a uniqueness string has been attached to the price, append it to the item's title.
- if ($uniqueness) {
- $item->title .= ": " . trim($uniqueness);
- }
- }
- }
- } */
 
 /**
  * Implements hook_product_feature().
@@ -377,6 +281,7 @@ function _uc_crowdfunding_feature_form($data = FALSE) {
     '#date_format' => 'Y-m-d H:i',
     '#date_label_position' => 'within',
     '#date_increment' => 15,
+    '#required' => TRUE,
   );
   $form['crowdfunding']['cf_target'] = array(
     '#type' => 'textfield',
@@ -540,7 +445,6 @@ function uc_crowdfunding_product_report($nid) {
   $row->revenue = $row->revenue ? $row->revenue : 0;
   
   module_invoke_all('uc_cf_product_report', $nid, $row);
-  // $row = module_invoke_all('uc_crowdfunding_product_report', $nid, &$row);
   return $row;
 }
 
@@ -563,7 +467,7 @@ function _uc_crowdfunding_is_enabled($nid) {
   $report   = uc_crowdfunding_product_report($nid);
   $is_past_dateline = ($features->dateline < time()) ? TRUE : FALSE;
   $is_past_target = ($features->target <= $report->gross) ? TRUE : FALSE;
-
+  
   $enabled = TRUE;
   switch ($features->type) {
     case UC_CROWDFUNDING_TARGET_DATELINE:
@@ -589,7 +493,7 @@ function _uc_crowdfunding_is_enabled($nid) {
  *
  * @return int
  *   Remaing days the node should be avaliable for sale,
- *   rounded to the nearest integer.
+ *   rounded to the largest integer.
  */
 function _uc_crowdfunding_days_remaing($dateline) {
   $remaining = $dateline - time();
@@ -628,59 +532,6 @@ function _uc_crowdfunding_goal_achieved($nid, $features = NULL, $report = NULL) 
   }
   return FALSE;
 }
-
-// Load the sponsors for a certain product
-/*
- function _uc_crowdfunding_sponsors_report($nid) {
- // Get this node sales report; SQL based on the uc_reports module
- $query   = "SELECT op.order_product_id, op.order_id, op.data, nid, uid, price, billing_first_name, billing_last_name, billing_city, modified
- FROM {uc_order_products} op
- LEFT JOIN {uc_orders} o ON op.order_id = o.order_id
- WHERE op.nid = %d
- AND o.order_status IN ('paypal_pending', 'payment_received', 'completed')
- ORDER BY modified DESC";
- $results = db_query($query, $nid);
- $sponsors = array();
- $anonymous1 = 'Patrocinador checkbox';
- $anonymous2 = 'Patrocinador';
- $msg1 = 'Mensaje (opcional)';
- $msg2 = 'Mensaje';
- $msg3 = 'Mensaje al beneficiario (opcional)';
-
- $user0      = user_load(0);
- while ($row = db_fetch_object($results)){
- $buyer     = user_load($row->uid);
- $data      = unserialize($row->data);
- $attributes = isset($data['attributes']) ? $data['attributes'] : NULL;
-
- $msg = NULL;
- if ( $attributes && ( isset($attributes[$msg1]) ) ){
- $msg = $msg1;
- } else if ( $attributes && ( isset($attributes[$msg2]) ) ) {
- $msg = $msg2;
- } else if ( $attributes && ( isset($attributes[$msg3]) ) ) {
- $msg = $msg3;
- }
-
- $anonymous = ( $attributes && (isset($attributes[$anonymous1]) || isset($attributes[$anonymous2])) ) ? 1 : 0;
- // $product  = uc_node_checkout_load_order_product($row->order_product_id);
- $user_pic  = $anonymous ? _prospera_module_get_userpic_path($user0) : _prospera_module_get_userpic_path($buyer);
- $sponsor            = new stdClass();
- $sponsor->name      = ($anonymous) ? check_plain(variable_get('anonymous', t('Anonymous'))) : $row->billing_first_name.' '.$row->billing_last_name;
- $sponsor->city      = $row->billing_city;
- $sponsor->donation  = '$' . uc_currency_format($row->price, FALSE, TRUE);
- $sponsor->message   = $msg ? $attributes[$msg][0] : '';
- $sponsor->anonymous = $anonymous;
- $sponsor->user_pic  = theme('imagecache', 'thumb_52x52', $user_pic, $sponsor->name, $sponsor->name);
- $sponsor->date      = $row->modified;
- $sponsors[]         = $sponsor;
- }
-
- $sponsors = module_invoke_all('uc_crowdfunding_sponsors', $nid, &$sponsors);
- // module_invoke_all('uc_crowdfunding_sponsors', $nid, &$sponsors);
- return $sponsors;
- }
- */
 
 /**
  * Helper function that returns the crowdfunding feature options.
