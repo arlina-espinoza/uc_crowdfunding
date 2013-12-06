@@ -31,8 +31,8 @@ Installation
 3. Configure the defaults per node type (product class) in:
    admin/store/products/classes
    This will be used as default for all new nodes of that type.
-4. Additionally, you can add the crowdfunding feature as any other feature on
-   every product node.
+4. Additionally, you can add or edit the crowdfunding feature for any product
+   node through the Features tab on its Edit form.
 
 Theming
 =======
