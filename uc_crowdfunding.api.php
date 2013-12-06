@@ -39,4 +39,3 @@ function hook_uc_cf_product_report($nid, &$report) {
 /**
  * @} End of "addtogroup hooks".
  */
- 
