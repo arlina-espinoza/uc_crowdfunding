@@ -51,7 +51,7 @@ function uc_crowdfunding_form_alter(&$form, &$form_state, $form_id) {
   }
 
   if (strpos($form_id, 'uc_product_add_to_cart_form_') === 0) {
-   
+
     // 2) Hide the appropriate Qty. field on the cart view form.
     if ($node_has_cf_feature) {
       if (isset($form['qty'])) {
@@ -162,7 +162,7 @@ function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 
     case 'insert':
       $data = variable_get('uc_crowdfunding_class_' . $node->type, array());
-      
+
       // If product class has a default crowdfunding product feature.
       if ($data) {
         // Prepare data as if it were from a form submission.
@@ -172,7 +172,7 @@ function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         $data['cf_dateline'] = strtotime($data['cf_dateline']);
         $data['cf_dateline'] = format_date($data['cf_dateline'], 'custom', 'Y-m-d H:i');
         $form_state = array('values' => $data);
-        
+
         // Add feature to the product by spoofing the normal form submission.
         uc_crowdfunding_feature_form_submit(array(), $form_state);
       }
@@ -443,7 +443,7 @@ function uc_crowdfunding_product_report($nid) {
   $row->sold = $row->sold ? $row->sold : 0;
   $row->gross = $row->gross ? $row->gross : 0;
   $row->revenue = $row->revenue ? $row->revenue : 0;
-  
+
   module_invoke_all('uc_cf_product_report', $nid, $row);
   return $row;
 }
@@ -467,7 +467,7 @@ function _uc_crowdfunding_is_enabled($nid) {
   $report   = uc_crowdfunding_product_report($nid);
   $is_past_dateline = ($features->dateline < time()) ? TRUE : FALSE;
   $is_past_target = ($features->target <= $report->gross) ? TRUE : FALSE;
-  
+
   $enabled = TRUE;
   switch ($features->type) {
     case UC_CROWDFUNDING_TARGET_DATELINE:
@@ -475,7 +475,7 @@ function _uc_crowdfunding_is_enabled($nid) {
         $enabled = FALSE;
       }
       break;
-      
+
     case UC_CROWDFUNDING_CHECK_DATELINE:
       if ($is_past_dateline) {
         $enabled = FALSE;
@@ -512,10 +512,10 @@ function _uc_crowdfunding_days_remaing($dateline) {
  *   Node Id.
  *
  * @param object $features
- *   See @link uc_crowdfunding_product_load uc_crowdfunding_product_load @endlink
+ *   See @link uc_crowdfunding_product_load link @endlink.
  *
  * @param object $report
- *   See @link uc_crowdfunding_product_report uc_crowdfunding_product_report @endlink
+ *   See @link uc_crowdfunding_product_report link @endlink.
  *
  * @return bool
  *   Whether the target goal amount has been reached.
@@ -546,10 +546,10 @@ function _uc_crowdfunding_explanations($option) {
   switch ($option) {
     case UC_CROWDFUNDING_TARGET_DATELINE:
       return t('Disable donations if current date is after dateline OR if target amount is reached.');
-      
+
     case UC_CROWDFUNDING_CHECK_DATELINE:
       return t('Disable donations if current date is after dateline (allows donating past target amount).');
-      
+
     default:
       return '';
   }

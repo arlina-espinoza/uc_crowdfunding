@@ -29,7 +29,6 @@
  * 
  * @return object
  *   The $report object.
- *   
  */
 function hook_uc_cf_product_report($nid, &$report) {
   // Optional alterations to $report.
