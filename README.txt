@@ -7,16 +7,15 @@ By Arlina E. Rhoton ("Arlina", http://drupal.org/user/1055344)
 Description
 ===========
 Defines an Ubercart product feature to turn any product into a
-"crowdfunding style" donation product.
-Allows a product to have a dateline and an amount as goal. If the
-goal is not met by the deadline, the "Add to cart" button is disabled.
+"crowdfunding style" donation product, in which users may donate
+towards a goal before a dateline is reached.
 Two options are available:
  1 - Disable donations if current date is after dateline
      OR if target amount is reached.
  2 - Disable donations if current date is after dateline
      (allows donating past target amount).
-Defaults can be set at global or node class level, and as any  
-Ubercart feature, can be added or edited for every node.
+Defaults can be set at global or node type level, but can also
+be added or edited for every product node.
 
 Tips
 ====
