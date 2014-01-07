@@ -73,10 +73,6 @@ function uc_crowdfunding_uninstall() {
   drupal_uninstall_schema('uc_crowdfunding');
   db_query("DELETE FROM {uc_product_features} WHERE fid = 'crowdfunding'");
   variable_del('uc_crowdfunding_global_default_dateline');
-  global $conf;
-  foreach (array_keys($conf) as $key) {
-    if (strpos($key, 'uc_crowdfunding_class_') === 0) {
-      variable_del($key);
-    }
-  }
+  db_query("DELETE FROM {variable} WHERE name LIKE 'uc_crowdfunding_class_%%'");
+  cache_clear_all('variables', 'cache');
 }
