@@ -458,7 +458,7 @@ function uc_crowdfunding_product_report($nid) {
  *   Node ID.
  *
  * @return bool
- *   Whether the node should be avaliable for sale or not.
+ *   Whether the node should be available for sale or not.
  *
  * @todo Refactor to avoid unnecessary database queries.
  */
@@ -492,7 +492,7 @@ function _uc_crowdfunding_is_enabled($nid) {
  *   Dateline as timestamp.
  *
  * @return int
- *   Remaing days the node should be avaliable for sale,
+ *   Remaining days the node should be available for sale,
  *   rounded to the largest integer.
  */
 function _uc_crowdfunding_days_remaing($dateline) {
