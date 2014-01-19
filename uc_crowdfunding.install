@@ -60,17 +60,9 @@ function uc_crowdfunding_schema() {
 }
 
 /**
- * Implements hook_install().
- */
-function uc_crowdfunding_install() {
-  drupal_install_schema('uc_crowdfunding');
-}
-
-/**
  * Implements hook_uninstall().
  */
 function uc_crowdfunding_uninstall() {
-  drupal_uninstall_schema('uc_crowdfunding');
   db_query("DELETE FROM {uc_product_features} WHERE fid = 'crowdfunding'");
   variable_del('uc_crowdfunding_global_default_dateline');
   db_query("DELETE FROM {variable} WHERE name LIKE 'uc_crowdfunding_class_%%'");
