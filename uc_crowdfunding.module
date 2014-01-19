@@ -34,16 +34,12 @@ define('UC_CROWDFUNDING_CHECK_DATELINE', 2);
  * 4) Alter the product class form to set default values.
  */
 function uc_crowdfunding_form_alter(&$form, &$form_state, $form_id) {
-  //dsm($form);
-  /*$query = "SELECT COUNT(*) FROM {uc_product_features}
-            WHERE nid = %d AND fid = '%s'";
-  $node_has_cf_feature = db_result(db_query($query, $nid, 'crowdfunding'));*/
 
   // 1) Alter the product feature add form.
   if ($form_id == 'uc_product_feature_add_form') {
     $nid = arg(1);
     $node_has_cf_feature = _uc_crowdfunding_node_has_feature($nid);
-    drupal_set_message("uc_product_feature_add_form - nid = $nid, node_has_cf_feature = $node_has_cf_feature");
+
     // If a crowdfunding feature has already been added to this product.
     if ($node_has_cf_feature) {
       // Remove crowdfunding from the available list of features to add.
@@ -54,8 +50,7 @@ function uc_crowdfunding_form_alter(&$form, &$form_state, $form_id) {
   if (strpos($form_id, 'uc_product_add_to_cart_form_') === 0) {
     $nid = $form['node']['#value']->nid;
     $node_has_cf_feature = _uc_crowdfunding_node_has_feature($nid);
-    drupal_set_message("uc_product_add_to_cart_form_ - nid = $nid, node_has_cf_feature = $node_has_cf_feature");
-    drupal_set_message("_uc_crowdfunding_is_enabled($nid): " . _uc_crowdfunding_is_enabled($nid));
+
     // 2) Hide the appropriate Qty. field on the cart view form.
     if ($node_has_cf_feature) {
       if (isset($form['qty'])) {
@@ -82,14 +77,12 @@ function uc_crowdfunding_form_alter(&$form, &$form_state, $form_id) {
 
   // 4) Alter the product class form to set default values.
   if ($form_id == 'uc_product_class_form') {
-    drupal_set_message("uc_product_class_form");
-
     $data = FALSE;
     if (!empty($form['pcid']['#value'])) {
       $data = variable_get('uc_crowdfunding_class_' . $form['pcid']['#value'], array());
       $data = empty($data) ? FALSE : (object) $data;
     }
-    dsm($data);
+
     $form['crowdfunding'] = array(
       '#type' => 'fieldset',
       '#title' => t('Default Crowdfunding product feature'),
@@ -123,7 +116,6 @@ function uc_crowdfunding_form_alter(&$form, &$form_state, $form_id) {
  * Form submit handler for uc_product_class_form.
  */
 function uc_crowdfunding_product_class_submit($form, &$form_state) {
-  dsm($form_state);
   if ($form_state['values']['default_crowdfunding']) {
     $data = array(
       'cf_dateline' => $form_state['values']['cf_dateline'],
@@ -148,17 +140,7 @@ function uc_crowdfunding_node_load($nodes, $types) {
       $node->uc_crowdfunding_gross    = $report->gross;
       $node->uc_crowdfunding_revenue  = $report->revenue;
 
-      $query = db_select('uc_product_features', 'pf')
-        ->fields('pf')
-        ->condition('pf.nid', $node->nid)
-        ->condition('pf.fid', 'crowdfunding');
-
-      $node_has_cf_feature = $query->countQuery()->execute()->fetchField();
-      dsm('node_has_cf_feature: ' . $node_has_cf_feature);
-
-      /*$query = "SELECT pfid FROM {uc_product_features}
-                WHERE fid = 'crowdfunding' AND nid = :id";
-      $result = db_query($query, array(':id' => $node->nid));*/
+      $node_has_cf_feature = _uc_crowdfunding_node_has_feature($node->nid);
 
       if ($node_has_cf_feature) {
         $feature = uc_crowdfunding_product_load($node->nid);
@@ -178,9 +160,7 @@ function uc_crowdfunding_node_load($nodes, $types) {
  */
 function uc_crowdfunding_node_insert($node) {
   if (uc_product_is_product($node)) {
-    dsm($node);
     $data = variable_get('uc_crowdfunding_class_' . $node->type, array());
-    dsm($data);
 
     // If product class has a default crowdfunding product feature.
     if (!empty($data)) {
@@ -208,33 +188,6 @@ function uc_crowdfunding_node_delete($node) {
     }
   }
 }
-
-/**
- * Implements hook_nodeapi().
- *
- * Summary of alterations:
- * 1) Removes price displays from variable priced product nodes.
- * 2) Inserts crowdfunding product feature on product node creation.
- */
-/*function uc_crowdfunding_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  if (!uc_product_is_product($node)) {
-    return;
-  }
-
-  switch ($op) {
-    case 'load':
-      // moved to hook_node_load()
-      break;
-
-    case 'insert':
-      // moved to hook_node_insert()
-      break;
-
-    case 'delete':
-      // moved to hook_node_delete()
-      break;
-  }
-}*/
 
 /**
  * Implements hook_uc_product_feature().
@@ -291,8 +244,6 @@ function uc_crowdfunding_feature_form($form, &$form_state, $node, $feature) {
     $data = $query->execute()->fetchObject();
   }
 
-  //$query = 'SELECT * FROM {uc_crowdfunding_products} WHERE pfid = %d';
-  //$data = db_fetch_object(db_query($query, $feature['pfid']));
   if ($data && $data->dateline) {
     $data->dateline = format_date($data->dateline, 'custom', 'Y-m-d H:i');
   }
@@ -316,6 +267,9 @@ function uc_crowdfunding_feature_form($form, &$form_state, $node, $feature) {
  *
  * @param object $data
  *   Saved crowdfunding feature data for a given node.
+ *
+ * @return array
+ *   The form.
  */
 function _uc_crowdfunding_feature_form($data = FALSE) {
   $form = array();
@@ -323,7 +277,7 @@ function _uc_crowdfunding_feature_form($data = FALSE) {
   $default_date = format_date($default_date, 'custom', 'Y-m-d H:i');
   $uc_sign_after_amount = variable_get('uc_sign_after_amount', FALSE);
   $uc_currency_sign = variable_get('uc_currency_sign', '$');
-  dsm($data);
+
   $form['#validate'] = array('uc_crowdfunding_feature_form_validate');
 
   $form['crowdfunding'] = array(
@@ -369,7 +323,8 @@ function uc_crowdfunding_feature_form_validate($form, &$form_state) {
   // Check for invalid amount in the "Target Amount" field.
   $value = $form_state['values']['cf_target'];
   if (!is_numeric($value)) {
-    form_set_error('cf_target', t('The value %val does not appear to be a number. Please enter the amount without currency symbols.', array('%val' => $value)));
+    $msg = t('The value %val does not appear to be a number. Please enter the amount without currency symbols.', array('%val' => $value));
+    form_set_error('cf_target', $msg);
   }
 }
 
@@ -433,7 +388,6 @@ function uc_crowdfunding_feature_form_submit($form, &$form_state) {
  *   The product feature to delete.
  */
 function uc_crowdfunding_feature_delete($feature) {
-  //db_query('DELETE FROM {uc_crowdfunding_products} WHERE pfid = %d', $feature['pfid']);
   db_delete('uc_crowdfunding_products')->condition('pfid', $feature['pfid'])->execute();
 }
 
@@ -451,13 +405,17 @@ function uc_crowdfunding_feature_delete($feature) {
  *   - target: Target amount.
  */
 function uc_crowdfunding_product_load($nid) {
-  $query = db_select('uc_product_features', 'pf');
-  $query->leftJoin('uc_crowdfunding_products', 'cf', 'pf.pfid = cf.pfid');
-  $query->fields('cf');
-  $query->condition('pf.nid', $nid);
-  $query->condition('pf.fid', 'crowdfunding');
+  $feature  = &drupal_static(__FUNCTION__, array());
+  if (!isset($feature[$nid])) {
+    $query = db_select('uc_product_features', 'pf');
+    $query->leftJoin('uc_crowdfunding_products', 'cf', 'pf.pfid = cf.pfid');
+    $query->fields('cf');
+    $query->condition('pf.nid', $nid);
+    $query->condition('pf.fid', 'crowdfunding');
 
-  return $query->execute()->fetchObject();
+    $feature[$nid] = $query->execute()->fetchObject();
+  }
+  return $feature[$nid];
 }
 
 /**
@@ -479,37 +437,43 @@ function uc_crowdfunding_product_load($nid) {
  *   - revenue: The total revenue this product has generated.
  */
 function uc_crowdfunding_product_report($nid) {
-  // Get the node sales report; SQL based on the uc_reports module.
-  $status = array('payment_received', 'completed');
-  $query = db_select('node', 'n')
-    ->fields('n', array('nid', 'title'));
-  $query->addExpression('(
+  $report  = &drupal_static(__FUNCTION__, array());
+  if (!isset($report[$nid])) {
+
+    // Get the node sales report; SQL based on the uc_reports module.
+    $status = array('payment_received', 'completed');
+    $query = db_select('node', 'n')
+      ->fields('n', array('nid', 'title'));
+    $query->addExpression('(
       SELECT SUM(uop.qty) FROM {uc_order_products} AS uop
       LEFT JOIN {uc_orders} AS uo ON uop.order_id = uo.order_id
       WHERE uo.order_status IN (:status) AND uop.nid = n.nid
       )', 'sold', array(':status' => $status));
-  $query->addExpression('(
+    $query->addExpression('(
       SELECT (SUM(uop.price * uop.qty) - SUM(uop.cost * uop.qty))
       FROM {uc_order_products} AS uop
       LEFT JOIN {uc_orders} AS uo ON uop.order_id = uo.order_id
       WHERE uo.order_status IN (:status) AND uop.nid = n.nid
       )', 'gross', array(':status' => $status));
-  $query->addExpression('(
+    $query->addExpression('(
       SELECT (SUM(uop.price * uop.qty)) FROM {uc_order_products} AS uop
       LEFT JOIN {uc_orders} AS uo ON uop.order_id = uo.order_id
       WHERE uo.order_status IN (:status) AND uop.nid = n.nid
       )', 'revenue', array(':status' => $status));
-  $query->condition('n.nid', $nid)
-    ->groupBy('n.nid')
-    ->groupBy('n.title');
+    $query->condition('n.nid', $nid)
+      ->groupBy('n.nid')
+      ->groupBy('n.title');
 
-  $row = $query->execute()->fetchObject();
-  $row->sold = $row->sold ? $row->sold : 0;
-  $row->gross = $row->gross ? $row->gross : 0;
-  $row->revenue = $row->revenue ? $row->revenue : 0;
+    $row = $query->execute()->fetchObject();
+    $row->sold = $row->sold ? $row->sold : 0;
+    $row->gross = $row->gross ? $row->gross : 0;
+    $row->revenue = $row->revenue ? $row->revenue : 0;
 
-  module_invoke_all('uc_cf_product_report', $nid, $row);
-  return $row;
+    module_invoke_all('uc_cf_product_report', $nid, $row);
+
+    $report[$nid] = $row;
+  }
+  return $report[$nid];
 }
 
 /**
@@ -523,8 +487,6 @@ function uc_crowdfunding_product_report($nid) {
  *
  * @return bool
  *   Whether the node should be available for sale or not.
- *
- * @todo Refactor to avoid unnecessary database queries.
  */
 function _uc_crowdfunding_is_enabled($nid) {
   $features = uc_crowdfunding_product_load($nid);
@@ -630,10 +592,13 @@ function _uc_crowdfunding_explanations($option) {
  *   True if the node has a crowdfunding feature.
  */
 function _uc_crowdfunding_node_has_feature($nid) {
-  $query = db_select('uc_product_features', 'pf')
-    ->fields('pf')
-    ->condition('pf.nid', $nid)
-    ->condition('pf.fid', 'crowdfunding');
-
-  return $query->countQuery()->execute()->fetchField();
+  $has_feature = &drupal_static(__FUNCTION__, array());
+  if (!isset($has_feature[$nid])) {
+    $query = db_select('uc_product_features', 'pf')
+      ->fields('pf')
+      ->condition('pf.nid', $nid)
+      ->condition('pf.fid', 'crowdfunding');
+    $has_feature[$nid] = $query->countQuery()->execute()->fetchField();
+  }
+  return $has_feature[$nid];
 }
