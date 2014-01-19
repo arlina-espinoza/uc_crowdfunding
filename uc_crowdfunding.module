@@ -281,12 +281,15 @@ function _uc_crowdfunding_settings() {
 //function uc_varprice_feature_form($form, &$form_state, $node, $feature) {
 function uc_crowdfunding_feature_form($form, &$form_state, $node, $feature) {
   $form = array();
+  $data = FALSE;
 
-  // Load the crowdfunding data specific to this product.
-  $query = db_select('uc_crowdfunding_products', 'cp')
-    ->fields('cp')
-    ->condition('cp.pfid', $feature['pfid']);
-  $data = $query->execute()->fetchObject();
+  // Load the crowdfunding data specific to this product, if available.
+  if (!empty($feature)) {
+    $query = db_select('uc_crowdfunding_products', 'cp')
+      ->fields('cp')
+      ->condition('cp.pfid', $feature['pfid']);
+    $data = $query->execute()->fetchObject();
+  }
 
   //$query = 'SELECT * FROM {uc_crowdfunding_products} WHERE pfid = %d';
   //$data = db_fetch_object(db_query($query, $feature['pfid']));
