@@ -14,13 +14,16 @@ function uc_crowdfunding_schema() {
   $schema = array();
 
   $schema['uc_crowdfunding_products'] = array(
+    'description' => 'Crowdfunding configuration per product feature.',
     'fields' => array(
       'cfid' => array(
+        'description' => 'Crowdfunding feature id',
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
       'pfid' => array(
+        'description' => 'Product feature id, references {uc_product_features}.pfid.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
@@ -63,8 +66,11 @@ function uc_crowdfunding_schema() {
  * Implements hook_uninstall().
  */
 function uc_crowdfunding_uninstall() {
-  db_query("DELETE FROM {uc_product_features} WHERE fid = 'crowdfunding'");
-  variable_del('uc_crowdfunding_global_default_dateline');
-  db_query("DELETE FROM {variable} WHERE name LIKE 'uc_crowdfunding_class_%%'");
+  db_delete('uc_product_features')
+    ->condition('fid', 'crowdfunding')
+    ->execute();
+  db_delete('variable')
+    ->condition('name', 'uc_crowdfunding_%%', 'LIKE')
+    ->execute();
   cache_clear_all('variables', 'cache');
 }

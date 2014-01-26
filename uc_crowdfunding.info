@@ -7,5 +7,3 @@ dependencies[] = uc_store
 dependencies[] = date_api
 package = Ubercart - extra
 core = 7.x
-files[] = uc_crowdfunding.module
-files[] = uc_crowdfunding.install

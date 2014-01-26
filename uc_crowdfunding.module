@@ -18,97 +18,95 @@ define('UC_CROWDFUNDING_TARGET_DATELINE', 1);
 define('UC_CROWDFUNDING_CHECK_DATELINE', 2);
 
 /**
- * Implements hook_form_alter().
+ * Implements hook_form_FORM_ID_alter().
  *
- * Alters:
- * * uc_product_feature_add_form
- * * uc_product_add_to_cart_form_*
- * * uc_product_class_form
- *
- * Summary of alterations:
- * 1) Alters the product feature add form to restrict multiple crowdfunding
- *    features from being added to a single product.
- * 2) Hide the appropriate Qty. fields on the cart view form.
- * 3) Disable the "Add to cart" form if goal has been reached or is past
- *    dateline.
- * 4) Alter the product class form to set default values.
+ * Form ID: uc_product_feature_add_form
+ * Alters the product feature add form to restrict multiple crowdfunding
+ * features from being added to a single product.
  */
-function uc_crowdfunding_form_alter(&$form, &$form_state, $form_id) {
+function uc_crowdfunding_form_uc_product_feature_add_form_alter(&$form, &$form_state, $form_id) {
+  $nid = arg(1);
+  $node_has_cf_feature = _uc_crowdfunding_node_has_feature($nid);
 
-  // 1) Alter the product feature add form.
-  if ($form_id == 'uc_product_feature_add_form') {
-    $nid = arg(1);
-    $node_has_cf_feature = _uc_crowdfunding_node_has_feature($nid);
+  // If a crowdfunding feature has already been added to this product.
+  if ($node_has_cf_feature) {
+    // Remove crowdfunding from the available list of features to add.
+    unset($form['feature']['#options']['crowdfunding']);
+  }
+}
 
-    // If a crowdfunding feature has already been added to this product.
-    if ($node_has_cf_feature) {
-      // Remove crowdfunding from the available list of features to add.
-      unset($form['feature']['#options']['crowdfunding']);
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Form ID: uc_product_class_form
+ * Alter the product class form to set default values.
+ */
+function uc_crowdfunding_form_uc_product_class_form_alter(&$form, &$form_state, $form_id) {
+  $data = FALSE;
+  if (!empty($form['pcid']['#value'])) {
+    $data = variable_get('uc_crowdfunding_class_' . $form['pcid']['#value'], array());
+    $data = empty($data) ? FALSE : (object) $data;
+  }
+
+  $form['crowdfunding'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Default Crowdfunding product feature'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => 5,
+  );
+  $form['crowdfunding']['default_crowdfunding'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Check this box to add a default product feature to every product of this class using these settings.'),
+    '#default_value' => $data === FALSE ? FALSE : TRUE,
+  );
+  $form['crowdfunding'] += _uc_crowdfunding_feature_form(FALSE);
+  $form_crowdfunding = &$form['crowdfunding']['crowdfunding'];
+  $form_crowdfunding['cf_dateline']['#type'] = 'textfield';
+  $form_crowdfunding['cf_dateline']['#description'] = t('Default dateline for this product');
+  $form_crowdfunding['cf_dateline']['#default_value'] = variable_get('uc_crowdfunding_global_default_dateline', '+14 days');
+  if ($data) {
+    $form_crowdfunding['cf_dateline']['#default_value'] = $data->cf_dateline;
+    $form_crowdfunding['cf_target']['#default_value'] = $data->cf_target;
+    $form_crowdfunding['cf_type']['#default_value'] = $data->cf_type;
+  }
+  $form['#validate'][] = 'uc_crowdfunding_feature_form_validate';
+  $form['#submit'][] = 'uc_crowdfunding_product_class_submit';
+
+  $form['submit']['#weight'] = 10;
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ *
+ * Base Form ID:uc_product_add_to_cart_form
+ * Hides the Qty. field on the add to cart form, and
+ * disables the "Add to cart" form if goal has been reached or is past dateline.
+ */
+function uc_crowdfunding_form_uc_product_add_to_cart_form_alter(&$form, &$form_state, $form_id) {
+  $nid = $form['node']['#value']->nid;
+  $node_has_cf_feature = _uc_crowdfunding_node_has_feature($nid);
+
+  // Hide the Qty. field on the add to cart form.
+  if ($node_has_cf_feature) {
+    if (isset($form['qty'])) {
+      $form['qty'] = array(
+        '#type'  => 'hidden',
+        '#value' => 1,
+      );
     }
   }
 
-  if (strpos($form_id, 'uc_product_add_to_cart_form_') === 0) {
-    $nid = $form['node']['#value']->nid;
-    $node_has_cf_feature = _uc_crowdfunding_node_has_feature($nid);
-
-    // 2) Hide the appropriate Qty. field on the cart view form.
-    if ($node_has_cf_feature) {
-      if (isset($form['qty'])) {
-        $form['qty'] = array(
-          '#type'  => 'hidden',
-          '#value' => 1,
-        );
-      }
+  // Disable the add to cart form if goal has been reached
+  // or is past dateline.
+  if ($node_has_cf_feature && !_uc_crowdfunding_is_enabled($nid)) {
+    unset($form['actions']['submit']);
+    if (isset($form['attributes'])) {
+      unset($form['attributes']);
     }
-
-    // 3) Disable the add to cart form if goal has been reached
-    // or is past dateline.
-    if ($node_has_cf_feature && !_uc_crowdfunding_is_enabled($nid)) {
-      unset($form['actions']['submit']);
-      if (isset($form['attributes'])) {
-        unset($form['attributes']);
-      }
-      if (isset($form['qty'])) {
-        unset($form['qty']);
-      }
+    if (isset($form['qty'])) {
+      unset($form['qty']);
     }
-
-  }
-
-  // 4) Alter the product class form to set default values.
-  if ($form_id == 'uc_product_class_form') {
-    $data = FALSE;
-    if (!empty($form['pcid']['#value'])) {
-      $data = variable_get('uc_crowdfunding_class_' . $form['pcid']['#value'], array());
-      $data = empty($data) ? FALSE : (object) $data;
-    }
-
-    $form['crowdfunding'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Default Crowdfunding product feature'),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#weight' => 5,
-    );
-    $form['crowdfunding']['default_crowdfunding'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Check this box to add a default product feature to every product of this class using these settings.'),
-      '#default_value' => $data === FALSE ? FALSE : TRUE,
-    );
-    $form['crowdfunding'] += _uc_crowdfunding_feature_form(FALSE);
-    $form_crowdfunding = &$form['crowdfunding']['crowdfunding'];
-    $form_crowdfunding['cf_dateline']['#type'] = 'textfield';
-    $form_crowdfunding['cf_dateline']['#description'] = t('Default dateline for this product');
-    $form_crowdfunding['cf_dateline']['#default_value'] = variable_get('uc_crowdfunding_global_default_dateline', '+14 days');
-    if ($data) {
-      $form_crowdfunding['cf_dateline']['#default_value'] = $data->cf_dateline;
-      $form_crowdfunding['cf_target']['#default_value'] = $data->cf_target;
-      $form_crowdfunding['cf_type']['#default_value'] = $data->cf_type;
-    }
-    $form['#validate'][] = 'uc_crowdfunding_feature_form_validate';
-    $form['#submit'][] = 'uc_crowdfunding_product_class_submit';
-
-    $form['submit']['#weight'] = 10;
   }
 }
 
@@ -231,17 +229,15 @@ function _uc_crowdfunding_settings() {
 /**
  * Build settings form for the individual crowdfunding product feature.
  */
-//function uc_varprice_feature_form($form, &$form_state, $node, $feature) {
 function uc_crowdfunding_feature_form($form, &$form_state, $node, $feature) {
   $form = array();
   $data = FALSE;
 
   // Load the crowdfunding data specific to this product, if available.
   if (!empty($feature)) {
-    $query = db_select('uc_crowdfunding_products', 'cp')
-      ->fields('cp')
-      ->condition('cp.pfid', $feature['pfid']);
-    $data = $query->execute()->fetchObject();
+    $query = 'SELECT * FROM {uc_crowdfunding_products} WHERE pfid = :pfid';
+    $result = db_query($query, array(':pfid' => $feature['pfid']));
+    $data = $result->fetchObject();
   }
 
   if ($data && $data->dateline) {
@@ -582,8 +578,7 @@ function _uc_crowdfunding_explanations($option) {
 }
 
 /**
- * Helper function to determine if a given node
- * has a crowdfunding feature.
+ * Determine if a given node has a crowdfunding feature.
  *
  * @param int $nid
  *   Node ID.
